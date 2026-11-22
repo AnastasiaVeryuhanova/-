@@ -1,0 +1,343 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<title>Невидимый чин — маршрут первого гостя</title>
+<style>
+html{background:#0d0d0d}
+body{font-family:Georgia,serif;color:#eae6e0;padding:16px;margin:0}
+/* ФОТО ДЛЯ ЗАДНЕГО ПЛАНА: положите рядом с этим html файл gogol.png
+   (портрет Н. В. Гоголя или обложка повести «Нос»).
+   Файла нет — фон останется тёмным, ничего не сломается. */
+#bg{position:fixed;top:0;left:0;right:0;bottom:0;z-index:-1;overflow:hidden}
+#bg img{width:100%;height:100%;object-fit:cover;opacity:.22;filter:grayscale(40%) sepia(25%)}
+h1{color:#ff7a1a;font-size:26px;margin:0 0 2px;letter-spacing:0.5px;text-shadow:0 1px 4px rgba(0,0,0,.9)}
+.sub{color:#bdb7ae;font-size:13px;margin:0 0 6px;text-shadow:0 1px 3px rgba(0,0,0,.9)}
+.fomula{max-width:640px;background:rgba(20,20,20,.92);border-left:3px solid #ff7a1a;padding:8px 12px;font-size:13px;color:#d8d2c8;margin:6px 0 10px}
+#err{color:#ff5252;font-size:13px;min-height:16px;margin:0 0 8px}
+#map{width:640px;max-width:100%;border:2px solid #ff7a1a;border-radius:10px;display:block;cursor:pointer}
+.pad{margin-top:10px}
+.pad button{width:52px;padding:8px 0;font-size:18px;background:#262626;color:#fff;border:1px solid #ff7a1a;border-radius:8px;cursor:pointer;margin:0 4px 0 0}
+.pad button:hover{background:#ff7a1a;color:#111}
+.pad button.reset{width:auto;padding:9px 16px;font-size:13px;white-space:nowrap}
+#card{background:rgba(28,28,28,.95);border:1px solid #ff7a1a;border-radius:10px;padding:16px;max-width:640px;min-height:60px;margin:10px 0}
+#card h3{color:#ff7a1a;margin:0 0 8px}
+#card .lit{font-style:italic;color:#d99a55;font-size:13px;margin-bottom:8px}
+#card li{margin-bottom:5px;font-size:14px}
+#card p{font-size:14px;margin:8px 0 0}
+.tip{margin:10px 0 0;background:rgba(255,122,26,.08);border-left:3px solid #ff7a1a;padding:8px 10px;font-size:14px}
+.tip b{color:#ff7a1a}
+.act{margin-top:10px;border-left:3px solid #7a7a7a;padding-left:10px;font-size:14px}
+.photo{margin:10px 0 0;border:1px dashed #ff7a1a;border-radius:8px;min-height:120px;position:relative;overflow:hidden;background:#141414}
+.photo img{width:100%;display:block}
+.photo.ph:after{content:attr(data-txt);position:absolute;top:0;left:0;right:0;bottom:0;display:flex;align-items:center;justify-content:center;color:#8a8a8a;font-size:13px;padding:12px;text-align:center}
+.navtitle{color:#ff7a1a;font-size:15px;margin:14px 0 8px}
+#modes button,#story button{padding:8px 12px;margin:0 6px 6px 0;background:#262626;color:#eae6e0;border:1px solid #3a3a3a;border-radius:8px;cursor:pointer;font-family:inherit;font-size:13px}
+#modes button:hover,#story button:hover{border-color:#ff7a1a}
+#modes button.on,#story button.on{border-color:#ff7a1a;color:#ff7a1a}
+#nav button{display:block;width:100%;max-width:640px;text-align:left;padding:9px 12px;margin-bottom:6px;background:#1c1c1c;color:#eae6e0;border:1px solid #3a3a3a;border-radius:8px;cursor:pointer;font-family:inherit;font-size:14px}
+#nav button:hover{border-color:#ff7a1a}
+#nav button.sel{border-color:#ff7a1a;color:#ff7a1a}
+#nav button.done:after{content:" \2713";color:#ff7a1a;font-weight:bold}
+.chip{display:inline-flex;width:30px;height:30px;border-radius:50%;border:1px solid #4a4a4a;color:#777;align-items:center;justify-content:center;font-size:12px;margin:3px}
+.chip.on{background:#ff7a1a;color:#111;font-weight:bold;border-color:#ff7a1a}
+#path{max-width:640px;color:#9a9a9a;font-size:13px;margin:10px 0}
+#path b{color:#ff7a1a}
+.big-mode #card li,.big-mode #card p,.big-mode .tip,.big-mode .act,.big-mode .fomula{font-size:18px}
+</style>
+</head>
+<body>
+<div id="bg"><img src="gogol.png" alt="ФОТО ДЛЯ ЗАДНЕГО ПЛАНА" onerror="this.parentNode.style.display='none'"></div>
+<div id="err"></div>
+<h1>&laquo;Невидимый чин&raquo;</h1>
+<p class="sub">Маршрут первого гостя по повести Н.&nbsp;В.&nbsp;Гоголя «Нос». Здесь можно спросить.</p>
+<div class="fomula"><b>Формула проекта.</b> Для нового гостя, когда он впервые входит в незнакомое пространство Петербурга, мы предлагаем понятный маршрут с подсказками и литературной историей, чтобы человек мог сориентироваться и задать личный вопрос, а организация получила повод говорить о гостеприимстве.</div>
+<canvas id="map" width="640" height="384"></canvas>
+<div class="pad">
+<button onclick="move(0,-1)">&#8593;</button>
+<button onclick="move(-1,0)">&#8592;</button>
+<button onclick="move(0,1)">&#8595;</button>
+<button onclick="move(1,0)">&#8594;</button>
+<button class="reset" onclick="location.reload()">Сбросить маршрут</button>
+<button class="reset" onclick="big()">Крупный текст</button>
+</div>
+<div id="card"><i style="color:#777">Выберите место в списке ниже.</i></div>
+<div id="story">
+<div class="navtitle">Литературная история: три экрана</div>
+<button data-s="s1">Экран 1. Как подойти?</button>
+<button data-s="s2">Экран 2. Прямо — это куда?</button>
+<button data-s="s3">Экран 3. Ваш первый шаг</button>
+</div>
+<div id="modes">
+<div class="navtitle">Режимы визита</div>
+<button data-m="alone">Пришёл один</button>
+<button data-m="quiet">Не хочу разговаривать</button>
+<button data-m="guest">Жду гостей</button>
+<button data-m="prices">Сколько это стоит</button>
+<button data-m="practical">Мелочи, о которых не спросят</button>
+<button data-m="rules">Дресс-код и время</button>
+<button data-m="sos">Если что-то случилось</button>
+</div>
+<div id="nav"><div class="navtitle">Навигатор: выберите место</div><div id="navbtns"></div></div>
+<p>Карта барьеров: <b id="pc">0</b>/10 <span id="tm"></span></p>
+<div id="chips"></div>
+<div id="path">Путь посетителя: <b>встречает</b> &rarr; <b>понимает предложение</b> &rarr; <b>действует</b> &rarr; <b>размышляет или отвечает</b> &rarr; <b>при желании делится с другими</b>. Человек вправе отказаться или ответить только себе.</div>
+
+<script>
+window.onerror=function(m,s,l){document.getElementById('err').textContent='ОШИБКА: '+m+' (строка '+l+')';};
+</script>
+
+<script>
+var MODE={
+alone:{t:"Пришёл один",body:'<p>Один — это норма. К одиночкам в ресторанах привыкли.</p><p><b>Где сесть:</b> бар основного зала — обслуживание быстрее.</p><p><b>Как позвать официанта:</b> короткий взгляд + чуть приподнятая рука или тихое «извините».</p><p><b>Чего избегать:</b> не извиняйтесь за то, что вы один.</p>'},
+quiet:{t:"Не хочу разговаривать",body:'<p>Визит можно пройти почти без слов.</p><p><b>Вход и подъём:</b> кивок вместо приветствия, дальше просто идёте по лестнице.</p><p><b>Заказ:</b> показать пальцем на пункт меню.</p><p><b>Позвать официанта:</b> взгляд + приподнятая рука.</p><p><b>Счёт:</b> «пишущий» жест в воздухе — стандартный знак.</p>'},
+guest:{t:"Жду гостей",body:'<p><b>Нормальная фраза:</b> «Я жду гостей, можно я подожду здесь?»</p><p><b>Где ждать:</b> у вешалок внизу или у бара наверху. Можно сразу занять столик: «столик на двоих, сейчас подойдёт второй».</p><p><b>Если гость опаздывает:</b> «Я начну, пожалуйста».</p>'},
+prices:{t:"Сколько это стоит",body:'<ul><li><b>Кофе или чай</b> — 250–750 руб.</li><li><b>Десерт</b> — примерно 250–690 руб.</li><li><b>Суп</b> — примерно 490–890 руб.</li><li><b>Горячие блюда</b> — примерно 820–2350 руб.</li></ul><p><b>Средний чек</b> можно спросить у персонала — нормальный вопрос.</p><p><b>Чаевые</b> — по желанию, обычно 5–10 %.</p>'},
+practical:{t:"Мелочи, о которых не спросят",body:'<ul><li><b>Розетки</b> — у столов в стене.</li><li><b>Wi-Fi</b> — пароль обычно на табличке на столе; можно спросить.</li><li><b>Карты</b> — принимают везде.</li><li><b>Дети и животные</b> — с ребёнком можно; насчёт собаки сообщите заранее.</li><li><b>Вода</b> — питьевую приносят бесплатно.</li></ul>'},
+rules:{t:"Дресс-код и время",body:'<ul><li><b>Одежда:</b> в основном зале дресс-кода обычно нет.</li><li><b>VIP-зона</b> — может быть строже: уточните при бронировании.</li><li><b>Время работы</b> — смотрите на двери внизу; кухня закрывается раньше зала.</li><li><b>Бронь</b> — в будни вечером и на выходных лучше бронировать.</li></ul>'},
+sos:{t:"Если что-то случилось",body:'<p>Главное правило: любой сотрудник обязан помочь.</p><ul><li><b>Остался без телефона или кошелька</b> — обратитесь к сотруднику.</li><li><b>Плохо себя чувствую</b> — «Мне плохо» ближайшему официанту.</li><li><b>Опрокинул что-то</b> — скажите официанту; за разбитое обычно не берут денег.</li><li><b>Счёт не сходится</b> — «Проверьте, пожалуйста, счёт».</li><li><b>Тревожно и хочется уйти</b> — можно уйти: вниз по лестнице и через ту же дверь, предупредив официанта.</li></ul>'}
+};
+
+// ===== ЛИТЕРАТУРНАЯ ИСТОРИЯ: ТРИ ЭКРАНА =====
+var STORY={
+s1:{t:"Экран 1. Как подойти?",body:'<p class="lit">&laquo;Как подойти к нему?&raquo; — Н.&nbsp;В.&nbsp;Гоголь, «Нос», часть II</p><p>Однажды чиновник Ковалёв встречает в Петербурге свой собственный нос. Нос разъезжает отдельно и одет в мундир. По одежде Ковалёв решает, что перед ним человек высокого чина, и не знает, как начать разговор. Сам Ковалёв тоже привык придавать значение положению людей.</p><p>В этом странном городе внешний знак способен помешать простому обращению.</p><div class="tip"><b>Вопрос истории.</b> А что помогает нам обратиться друг к другу, когда мы оказались в новом месте?</div>'},
+s2:{t:"Экран 2. Прямо — это куда?",body:'<p class="lit">&laquo;Как прямо? тут поворот: направо или налево?&raquo; — Н.&nbsp;В.&nbsp;Гоголь, «Нос», часть II</p><p>Позже Ковалёв просит извозчика ехать «прямо». Но впереди поворот, и извозчику нужно уточнить, куда направиться. Одно короткое слово ещё не объясняет дорогу.</p><p>Так и в незнакомом месте: то, что привычно сотруднику или постоянному гостю, может быть непонятно человеку, который здесь впервые. Подсказка или спокойный ответ способны сделать следующий шаг яснее.</p><div class="tip"><b>Вопрос истории.</b> Какая подсказка или какое обращение было бы полезно именно вам?</div>'},
+s3:{t:"Экран 3. Ваш первый шаг",body:'<p>Петербург встречает нас по-разному: иногда понятным указателем, иногда разговором с человеком, а иногда возможностью спокойно осмотреться. У каждого может быть свой ответ.</p><div class="tip"><b>Продолжите для себя или поделитесь с организацией:</b> «Когда я впервые вхожу в новое место Петербурга, мне помогает…»</div><p>Можно просто подумать и закрыть историю, ничего не вводя. Если хотите поделиться, ответ передаётся организаторам без имени. Публиковать фразу на стенде — отдельное разрешение, только ваше.</p>'}
+};
+
+// ===== ЗОНЫ ПО РЕАЛЬНОЙ СХЕМЕ =====
+// Порядок маршрута: 1 Вход (дверь) -> 2 Лестница -> 3 Вешалки -> наверх.
+// img — ИМЯ ФАЙЛА ФОТО: положите картинку с этим именем в папку с html.
+var Z=[
+{id:1,name:"Вход",x:10,y:10,w:4,h:1,head:"1. Вход в ресторан",img:"foto1_vhod.jpg",
+nav:"1. Вход — с чего всё начинается",
+hint:"Тут находится вход — дверь. Заходишь — и прямо перед тобой лестница наверх: заведение там, наверху. Можно постоять и осмотреться.",
+lit:"«Нос»: представился в чине — и его приняли.",
+b:["Как выглядит вход изнутри?","Сразу ли видно лестницу наверх?","Есть ли таблички или указатели?"],act:"Зайти и сразу увидеть лестницу."},
+{id:2,name:"Лестница",x:10,y:8,w:4,h:2,head:"2. Лестница: подъём в заведение",img:"foto2_lestnica.jpg",
+nav:"2. Лестница — подъём наверх",
+hint:"Тут начинается лестница — сразу за дверью входа. Зашёл и сразу поднимаешься в само заведение: это нормальный порядок, почти все гости делают именно так. Куртку оставишь на вешалке сразу после подъёма.",
+lit:"«Нос»: путь в «город наверху» начинается с подъёма.",
+b:["Понятно ли, что лестница ведёт в заведение?","Освещена ли лестница?","Есть ли наверху указатель?"],act:"Подняться по лестнице."},
+{id:3,name:"Вешалки",x:4,y:8,w:4,h:2,head:"3. Вешалки: верхняя одежда",img:"foto3_veshalki.jpg",
+nav:"3. Вешалки — куда сдать куртку",
+hint:"Тут находятся вешалки — слева от лестницы, параллельно ей. Поднимаетесь и оставляете куртку: если есть гардеробщик — сдайте под номерок, если нет — на свободный крючок. Сумку и телефон оставьте с собой.",
+lit:"«Нос»: Ковалёв не знает, как держаться с незнакомыми людьми.",
+b:["Понятно ли, где оставить верхнюю одежду?","Есть ли номерки или крючки?","Видно ли вешалки от лестницы?"],act:"Повесить верхнюю одежду после подъёма."},
+{id:4,name:"Первое пространство",x:12,y:6,w:4,h:1,head:"4. Первое пространство наверху",img:"foto4_hol.jpg",
+nav:"4. Первое пространство — где сориентироваться",
+hint:"Тут вы оказываетесь, поднявшись по лестнице. Первый взгляд на заведение. Можно спросить у любого сотрудника: «Я здесь впервые, подскажите, где столик» — это нормальная фраза.",
+lit:"«Нос»: Ковалёв ищет, к кому обратиться.",
+b:["Что видит человек, поднявшись?","Понятно ли, куда обратиться?","Есть ли сотрудник рядом?"],act:"Сориентироваться за 10 секунд."},
+{id:5,name:"Меню",x:12,y:4,w:4,h:2,head:"5. Меню: над первым пространством",img:"foto5_menyu.jpg",
+nav:"5. Меню — что заказать",
+hint:"Тут находится меню — над первым пространством: поднялся по лестнице и первым делом видишь меню. Можно взять в руки и переспросить: «А что это за блюдо?» — сомнение это приглашение к разговору.",
+lit:"«Нос»: непонятные знаки и чины вокруг.",
+b:["Где находится меню?","Можно ли его легко заметить?","Есть ли информация о правилах?"],act:"Взять меню и задать один вопрос."},
+{id:6,name:"Бар",x:1,y:5,w:4,h:2,head:"6. Бар основного зала",img:"foto6_bar.jpg",
+nav:"6. Бар — напитки и стойка",
+hint:"Тут находится бар основного зала — слева, за коридором от основного зала. Можно подойти и спросить рекомендацию: это работа бармена, а не одолжение. У бара удобно сидеть одному.",
+lit:"«Нос»: место, где Ковалёв узнаёт нос.",
+b:["Виден ли бар от лестницы?","Понятно ли, что можно заказать у стойки?","Есть ли места для одного гостя?"],act:"Спросить одну рекомендацию."},
+{id:7,name:"Основной зал",x:6,y:4,w:5,h:3,head:"7. Основной зал: где сесть",img:"foto7_zal.jpg",
+nav:"7. Основной зал — где сесть",
+hint:"Тут находится основной зал — в центре, между баром и меню. Свободный столик — приглашение, а не «чужое место». Заметьте свет, декор и звук: они и решают, «свой» вы или «чужой».",
+lit:"«Нос»: детали, по которым читают статус.",
+b:["Как расположены столы?","Понятно ли, где пройти?","Что создаёт атмосферу?"],act:"Найти свободный столик."},
+{id:8,name:"Туалет",x:16,y:1,w:3,h:2,head:"8. Туалет: где находится",img:"foto8_tualet.jpg",
+nav:"8. Туалет — где находится",
+hint:"Тут находится туалет — правый верхний угол. Можно найти самому по табличке — об этом чаще всего боятся спросить, и это самый честный страх новичка.",
+lit:"«Нос»: всё, о чём страшно спросить.",
+b:["Можно ли найти самостоятельно?","Есть ли понятная табличка?","Не скрыта ли дверь?"],act:"Найти без вопросов."},
+{id:9,name:"VIP-зона",x:1,y:1,w:3,h:2,head:"9. Дверь в VIP-зону",img:"foto9_vip.jpg",
+nav:"9. VIP — что там и можно ли",
+hint:"Тут находится дверь в VIP-зону — левый верхний угол, за своим коридором. Можно спокойно спросить: «Как попасть в VIP?» — иногда всё решает бронь. Это нормальный вопрос, а не дерзость.",
+lit:"«Нос»: чины, до которых не всем дотянуться.",
+b:["Понятно ли, что за этой дверью?","Есть ли табличка?","Нужна ли бронь?"],act:"Выяснить правила VIP-зоны."},
+{id:10,name:"Выход",x:10,y:11,w:4,h:1,head:"10. Выход: тот же, что вход",img:"foto10_vyhod.jpg",
+nav:"10. Выход — как уйти красиво",
+hint:"Выход — та же дверь, через которую вошли: вниз по лестнице, куртка — с вешалок по левую руку. Никаких «неизвестно куда».",
+lit:"«Нос»: возвращение в порядок города.",
+b:["Легко ли найти обратный путь?","Понятно ли, что выход через ту же дверь?","Удобно ли спускаться с курткой?"],act:"Спуститься и выйти через ту же дверь."}
+];
+</script>
+
+<script>
+var cv=document.getElementById('map'),ctx=cv.getContext('2d');
+var px=11,py=10,cnt=0,V={},trail=[[px,py]],t0=Date.now(),tmr=null,sel=null;
+
+function zoneAt(c,r){for(var i=0;i<Z.length;i++){var z=Z[i];if(c>=z.x&&c<z.x+z.w&&r>=z.y&&r<z.y+z.h)return z;}return null;}
+function move(dx,dy){stop();var nx=px+dx,ny=py+dy;if(nx<1||nx>18||ny<1||ny>11)return;px=nx;py=ny;push();tick();}
+function push(){var l=trail[trail.length-1];if(l[0]!=px||l[1]!=py)trail.push([px,py]);}
+function stop(){if(tmr){clearInterval(tmr);tmr=null;}}
+
+function bfs(sx,sy,tx,ty){
+var prev={},q=[[sx,sy]];
+prev[sx+','+sy]=null;
+while(q.length){
+  var c=q.shift();
+  if(c[0]==tx&&c[1]==ty){var p=[],k=tx+','+ty;while(k){var a=k.split(',');p.unshift([+a[0],+a[1]]);k=prev[k];}return p;}
+  var d=[[1,0],[-1,0],[0,1],[0,-1]];
+  for(var i=0;i<4;i++){var nx=c[0]+d[i][0],ny=c[1]+d[i][1],nk=nx+','+ny;if(nx>0&&nx<19&&ny>0&&ny<12&&!(nk in prev)){prev[nk]=c[0]+','+c[1];q.push([nx,ny]);}}
+}
+return null;
+}
+
+function go(z){
+stop();
+var p=bfs(px,py,z.x,z.y);
+if(!p)return;
+var i=1;
+tmr=setInterval(function(){
+  if(i>=p.length){stop();show(z);return;}
+  px=p[i][0];py=p[i][1];push();i++;tick();
+},120);
+}
+
+function show(z){
+var l='';
+for(var i=0;i<z.b.length;i++)l+='<li>'+z.b[i]+'</li>';
+document.getElementById('card').innerHTML='<h3>'+z.head+'</h3><div class="lit">'+z.lit+'</div><ul>'+l+'</ul><div class="tip"><b>Подсказка гостю.</b> '+z.hint+'</div><div class="photo ph" data-txt="Место для фото: положите файл «'+z.img+'» в папку с html."><img src="'+z.img+'" alt="" onload="this.parentNode.classList.remove(\'ph\')" onerror="this.parentNode.classList.add(\'ph\')"></div><div class="act">Гость: '+z.act+'</div>';
+}
+
+function showMode(k){
+var m=MODE[k];
+if(!m)return;
+var b=document.querySelectorAll('#modes button');
+for(var i=0;i<b.length;i++)b[i].className=(b[i].getAttribute('data-m')===k)?'on':'';
+var sb=document.querySelectorAll('#story button');
+for(var j=0;j<sb.length;j++)sb[j].className='';
+document.getElementById('card').innerHTML='<h3>'+m.t+'</h3>'+m.body;
+}
+
+function showStory(k){
+var s=STORY[k];
+if(!s)return;
+var sb=document.querySelectorAll('#story button');
+for(var i=0;i<sb.length;i++)sb[i].className=(sb[i].getAttribute('data-s')===k)?'on':'';
+var mb=document.querySelectorAll('#modes button');
+for(var j=0;j<mb.length;j++)mb[j].className='';
+document.getElementById('card').innerHTML='<h3>'+s.t+'</h3>'+s.body;
+}
+
+function tick(){
+var z=zoneAt(px,py);
+if(z&&!V[z.id]){V[z.id]=1;cnt++;show(z);renderNav();chips();if(cnt===Z.length)setTimeout(fin,2000);}
+draw();
+}
+
+function fin(){
+if(cnt!==Z.length)return;
+var s=Math.round((Date.now()-t0)/1000),m=Math.floor(s/60),r=s%60;
+var ts=(m>0?m+' мин ':'')+r+' с';
+document.getElementById('card').innerHTML='<h3>Готово: 10 из 10</h3><p>Карта барьеров закрыта за '+ts+'. Все 10 точек наблюдения пройдены: вход — лестница — вешалки — и дальше по заведению до выхода той же дверью.</p><div class="tip"><b>Личный вопрос.</b> Что позволяет мне почувствовать себя увереннее в незнакомом месте Петербурга? Можно подумать, ответить себе или поделиться фразой «Когда я впервые вхожу в новое место Петербурга, мне помогает…»</div><div class="act">Команде: скриншот золотого следа — иллюстрация для слайда «Тестирование». Ориентир проекта: не менее 8 из 10 добровольцев проходят маршрут без подсказки.</div>';
+document.getElementById('tm').textContent='Время: '+ts;
+}
+
+function renderNav(){
+var h='';
+for(var i=0;i<Z.length;i++){
+  var z=Z[i],cl=(sel===z.id?'sel ':'')+(V[z.id]?'done':'');
+  h+='<button data-id="'+z.id+'" class="'+cl+'">'+z.nav+'</button>';
+}
+document.getElementById('navbtns').innerHTML=h;
+}
+
+function chips(){
+document.getElementById('pc').textContent=cnt;
+var h='';
+for(var i=0;i<Z.length;i++)h+='<span class="chip'+(V[Z[i].id]?' on':'')+'" title="'+Z[i].name+'">'+Z[i].id+'</span>';
+document.getElementById('chips').innerHTML=h;
+}
+
+function big(){document.body.classList.toggle('big-mode');}
+
+function corr(x1,y1,x2,y2){
+ctx.strokeStyle='#9a8a70';ctx.fillStyle='#9a8a70';ctx.lineWidth=2;
+ctx.beginPath();ctx.moveTo(x1,y1);ctx.lineTo(x2,y2);ctx.stroke();
+var ang=Math.atan2(y2-y1,x2-x1);
+ctx.beginPath();
+ctx.moveTo(x2,y2);
+ctx.lineTo(x2-12*Math.cos(ang-0.4),y2-12*Math.sin(ang-0.4));
+ctx.lineTo(x2-12*Math.cos(ang+0.4),y2-12*Math.sin(ang+0.4));
+ctx.closePath();ctx.fill();
+}
+
+function draw(){
+ctx.clearRect(0,0,cv.width,cv.height);
+ctx.fillStyle='rgba(20,20,20,.9)';ctx.fillRect(0,0,cv.width,cv.height);
+ctx.strokeStyle='#3a3a3a';ctx.lineWidth=2;ctx.setLineDash([8,6]);
+ctx.beginPath();ctx.moveTo(0,8*32);ctx.lineTo(640,8*32);ctx.stroke();ctx.setLineDash([]);
+ctx.fillStyle='#8a8a8a';ctx.font='12px Georgia';
+ctx.fillText('ОСНОВНОЙ УРОВЕНЬ — наверху по лестнице',20,20);
+ctx.fillText('ВХОДНАЯ ЗОНА — внизу',8,10*32+16);
+for(var i=0;i<Z.length;i++){
+  var z=Z[i];
+  ctx.fillStyle=V[z.id]?'rgba(255,122,26,.22)':'rgba(255,122,26,.09)';
+  if(sel===z.id)ctx.fillStyle=V[z.id]?'rgba(255,122,26,.38)':'rgba(255,122,26,.17)';
+  ctx.fillRect(z.x*32+2,z.y*32+2,z.w*32-4,z.h*32-4);
+  ctx.strokeStyle='#ff7a1a';ctx.lineWidth=1;
+  ctx.strokeRect(z.x*32+2,z.y*32+2,z.w*32-4,z.h*32-4);
+  ctx.fillStyle='#ff7a1a';ctx.font='11px Georgia';
+  ctx.fillText(z.name,z.x*32+6,z.y*32+17);
+}
+ctx.strokeStyle='#6b5a3a';ctx.lineWidth=2;
+for(var st=0;st<4;st++){
+  ctx.beginPath();ctx.moveTo(10*32+4,(8+0.35+st*0.45)*32);ctx.lineTo(14*32-4,(8+0.35+st*0.45)*32);ctx.stroke();
+}
+corr(12*32,7*32+16,5*32,7*32+16);
+ctx.fillStyle='#9a8a70';ctx.font='11px Georgia';
+ctx.fillText('коридор',6.2*32,7*32+12);
+corr(2.5*32,5*32-2,2.5*32,3*32+6);
+ctx.fillText('коридор в VIP',2.7*32,4.2*32);
+if(trail.length>1){
+  ctx.strokeStyle='rgba(255,122,26,.75)';ctx.lineWidth=3;ctx.setLineDash([5,5]);
+  ctx.beginPath();ctx.moveTo(trail[0][0]*32+16,trail[0][1]*32+16);
+  for(var s2=1;s2<trail.length;s2++)ctx.lineTo(trail[s2][0]*32+16,trail[s2][1]*32+16);
+  ctx.stroke();ctx.setLineDash([]);
+}
+ctx.fillStyle='rgba(255,122,26,.9)';
+for(var p=0;p<trail.length;p++){
+  ctx.beginPath();ctx.arc(trail[p][0]*32+16,trail[p][1]*32+16,3,0,6.3);ctx.fill();
+}
+ctx.fillStyle='#f0ede8';ctx.beginPath();ctx.arc(px*32+16,py*32+16,9,0,6.3);ctx.fill();
+ctx.fillStyle='#111';ctx.font='bold 11px Georgia';ctx.fillText('Я',px*32+12,py*32+20);
+}
+
+document.addEventListener('keydown',function(e){
+var k=e.key.toLowerCase();
+if(k=='arrowup'||k=='w'||k=='ц')move(0,-1);
+else if(k=='arrowdown'||k=='s'||k=='ы')move(0,1);
+else if(k=='arrowleft'||k=='a'||k=='ф')move(-1,0);
+else if(k=='arrowright'||k=='d'||k=='в')move(1,0);
+else return;
+e.preventDefault();
+});
+
+document.addEventListener('click',function(e){
+var t=e.target;
+while(t&&t!==document.body){
+  if(t.getAttribute){
+   var m=t.getAttribute('data-m');
+   if(m){showMode(m);return;}
+   var s=t.getAttribute('data-s');
+   if(s){showStory(s);return;}
+   var id=t.getAttribute('data-id');
+   if(id){var n=+id;for(var i=0;i<Z.length;i++)if(Z[i].id===n){sel=n;renderNav();go(Z[i]);return;}}
+  }
+  t=t.parentNode;
+}
+});
+
+cv.addEventListener('click',function(e){
+var r=cv.getBoundingClientRect();
+var c=Math.floor((e.clientX-r.left)*20/r.width);
+var rr=Math.floor((e.clientY-r.top)*12/r.height);
+var z=zoneAt(c,rr);
+if(z){sel=z.id;renderNav();go(z);}
+});
+
+draw();renderNav();chips();tick();
+</script>
+</body>
+</html>
